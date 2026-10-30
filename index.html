@@ -1,55 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mis Enlaces Musicales</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="favicon-musica.ico" type="image/x-icon">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <div class="music-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music">
-            <path d="M9 18V5l12-2v13"></path>
-            <circle cx="6" cy="18" r="3"></circle>
-            <circle cx="18" cy="16" r="3"></circle>
-          </svg>
-        </div>
-        <h1>¡Mi nuevo sencillo ya está aquí!</h1>
-      </div>
-      
-      <div class="content">
-        <p class="lead">He preparado una canción que no te querrás perder.</p>
-        <p class="subtitle">Accede a él a través de los siguientes enlaces:</p>
-      </div>
-
-      <div class="links">
-        <a href="https://open.spotify.com/album/3L9W0hcSMVOqfP8f6Z7QlR?si=o0jQP9eKQIWaL3AaM-VxKQ" class="btn spotify" target="_blank">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music">
-            <path d="M9 18V5l12-2v13"></path>
-            <circle cx="6" cy="18" r="3"></circle>
-            <circle cx="18" cy="16" r="3"></circle>
-          </svg>
-          Escuchar en Spotify
-        </a>
-        <a href="https://youtu.be/nFF0wuSO39c?si=MwG_rYBXcaWi90CI" class="btn youtube" target="_blank">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play">
-            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-          </svg>
-          Ver en YouTube
-        </a>
-      </div>
-      
-      <div class="footer">
-        <p>© 2025 - Todos los derechos reservados</p>
-      </div>
-    </div>
-  </div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f2eadb" />
+    <meta
+      name="description"
+      content="RUIDO QR — Convertí tu link en un código QR único. Elegí tamaño y color, y descargalo en PNG o SVG. Sin registro, sin marca de agua."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>RUIDO QR — Tu link hecho código</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

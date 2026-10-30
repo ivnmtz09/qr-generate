@@ -1,0 +1,18 @@
+export const QR_COLORS = [
+  { name: 'Negro óptico', hex: '#111111' },
+  { name: 'Carbón', hex: '#2b2b2b' },
+  { name: 'Grafito', hex: '#3f3f46' },
+  { name: 'Pizarra', hex: '#4a4e69' },
+  { name: 'Azul noche', hex: '#0b1b3a' },
+  { name: 'Cobalto', hex: '#143a8f' },
+  { name: 'Azul acero', hex: '#1e3a5f' },
+  { name: 'Verde bosque', hex: '#0b3d2e' },
+  { name: 'Oliva', hex: '#3f4a1b' },
+  { name: 'Vino', hex: '#4b0f1f' },
+  { name: 'Burdeos', hex: '#7a1e2b' },
+  { name: 'Café', hex: '#4a2b1a' },
+  { name: 'Terracota', hex: '#8c3b1b' },
+  { name: 'Morado', hex: '#3b0b5c' },
+  { name: 'Índigo', hex: '#2e1a6b' },
+  { name: 'Petróleo', hex: '#083a3e' },
+]
