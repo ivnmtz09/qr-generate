@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import QRCode from 'qrcode'
+import {
+  formatFileSize,
+  makeQrPng,
+  makeQrSvg,
+  MAX_LOGO_BYTES,
+  readLogoFile,
+} from '../lib/qr'
 import { QR_COLORS } from '../data/colors'
 import {
   ArrowDownIcon,
   CheckIcon,
   DownloadIcon,
   GhostQr,
+  ImageIcon,
   LinkIcon,
   StarIcon,
   XIcon,
@@ -16,6 +23,8 @@ const MAX_SIZE = 1600
 const SIZE_STEP = 32
 const PREVIEW_SIZE = 760
 const SAMPLE_URL = 'https://ejemplo.com/tu-proyecto'
+const LOGO_ACCEPT = '.png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml'
+const LOGO_LIMIT_LABEL = `${Math.round(MAX_LOGO_BYTES / (1024 * 1024))} MB`
 
 const SIZE_PRESETS = [
   { label: 'S', value: 256 },
@@ -57,7 +66,7 @@ function normalizeLink(rawValue) {
   }
 }
 
-function makeFileName(url, colorHex, extension) {
+function makeFileName(url, colorHex, extension, hasLogo) {
   let host = 'codigo'
 
   try {
@@ -72,7 +81,7 @@ function makeFileName(url, colorHex, extension) {
       .replace(/^-+|-+$/g, '')
       .toLowerCase() || 'codigo'
 
-  return `qr-${slug}-${colorHex.replace('#', '').toLowerCase()}.${extension}`
+  return `qr-${slug}-${colorHex.replace('#', '').toLowerCase()}${hasLogo ? '-logo' : ''}.${extension}`
 }
 
 function triggerDownload(href, fileName) {
@@ -90,23 +99,37 @@ export default function Generator() {
   const [selectedColor, setSelectedColor] = useState(QR_COLORS[0])
   const [previewSrc, setPreviewSrc] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [logo, setLogo] = useState(null)
+  const [logoError, setLogoError] = useState('')
+  const [logoLoading, setLogoLoading] = useState(false)
+  const [logoDragging, setLogoDragging] = useState(false)
   const [downloadState, setDownloadState] = useState(null)
   const [toast, setToast] = useState(null)
 
   const inputRef = useRef(null)
+  const logoInputRef = useRef(null)
   const toastTimer = useRef(null)
   const previewRequest = useRef(0)
+  const logoRequest = useRef(0)
+  const dragDepth = useRef(0)
 
   const currentLink = useMemo(() => normalizeLink(link), [link])
+  const latestPreviewState = useRef({ currentLink, selectedColor })
+
   const showError = link.trim().length > 0 && currentLink.status === 'invalid'
   const hasQr = currentLink.status === 'valid' && Boolean(previewSrc)
   const progress = ((size - MIN_SIZE) / (MAX_SIZE - MIN_SIZE)) * 100
   const downloadsDisabled = !hasQr || Boolean(downloadState)
 
   useEffect(() => {
+    latestPreviewState.current = { currentLink, selectedColor }
+  }, [currentLink, selectedColor])
+
+  useEffect(() => {
     return () => {
       window.clearTimeout(toastTimer.current)
       previewRequest.current += 1
+      logoRequest.current += 1
     }
   }, [])
 
@@ -116,21 +139,25 @@ export default function Generator() {
     toastTimer.current = window.setTimeout(() => setToast(null), 3800)
   }
 
-  async function generatePreview(url, colorHex) {
+  async function generatePreview(url, colorHex, logoSrc) {
     const requestId = previewRequest.current + 1
     previewRequest.current = requestId
     setPreviewLoading(true)
 
     try {
-      const dataUrl = await QRCode.toDataURL(url, {
-        errorCorrectionLevel: 'H',
-        margin: 4,
-        width: PREVIEW_SIZE,
-        color: {
-          dark: colorHex,
-          light: '#ffffff',
+      const dataUrl = await makeQrPng(
+        url,
+        {
+          errorCorrectionLevel: 'H',
+          margin: 4,
+          width: PREVIEW_SIZE,
+          color: {
+            dark: colorHex,
+            light: '#ffffff',
+          },
         },
-      })
+        logoSrc,
+      )
 
       if (previewRequest.current === requestId) {
         setPreviewSrc(dataUrl)
@@ -158,7 +185,7 @@ export default function Generator() {
     const normalized = normalizeLink(nextLink)
 
     if (normalized.status === 'valid') {
-      generatePreview(normalized.url, selectedColor.hex)
+      generatePreview(normalized.url, selectedColor.hex, logo)
     } else {
       cancelPreview()
     }
@@ -177,7 +204,112 @@ export default function Generator() {
     setSelectedColor(color)
 
     if (currentLink.status === 'valid') {
-      generatePreview(currentLink.url, color.hex)
+      generatePreview(currentLink.url, color.hex, logo)
+    }
+  }
+
+  function openLogoPicker() {
+    if (logoLoading) {
+      return
+    }
+
+    setLogoError('')
+    logoInputRef.current?.click()
+  }
+
+  async function handleLogoFile(file) {
+    if (!file) {
+      return
+    }
+
+    const requestId = logoRequest.current + 1
+    logoRequest.current = requestId
+    setLogoLoading(true)
+    setLogoError('')
+
+    try {
+      const nextLogo = await readLogoFile(file)
+
+      if (logoRequest.current !== requestId) {
+        return
+      }
+
+      setLogo(nextLogo)
+
+      const latest = latestPreviewState.current
+
+      if (latest.currentLink.status === 'valid') {
+        generatePreview(latest.currentLink.url, latest.selectedColor.hex, nextLogo)
+      }
+    } catch (error) {
+      if (logoRequest.current === requestId) {
+        setLogoError(
+          error instanceof Error
+            ? error.message
+            : 'No pudimos cargar la imagen. Probá con otra.',
+        )
+      }
+    } finally {
+      if (logoRequest.current === requestId) {
+        setLogoLoading(false)
+      }
+    }
+  }
+
+  function handleLogoInput(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (file) {
+      handleLogoFile(file)
+    }
+  }
+
+  function handleLogoDragEnter(event) {
+    event.preventDefault()
+
+    if (!Array.from(event.dataTransfer.types).includes('Files')) {
+      return
+    }
+
+    dragDepth.current += 1
+    setLogoDragging(true)
+  }
+
+  function handleLogoDragOver(event) {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+  }
+
+  function handleLogoDragLeave(event) {
+    event.preventDefault()
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+
+    if (dragDepth.current === 0) {
+      setLogoDragging(false)
+    }
+  }
+
+  function handleLogoDrop(event) {
+    event.preventDefault()
+    dragDepth.current = 0
+    setLogoDragging(false)
+
+    const file = event.dataTransfer.files?.[0]
+
+    if (file) {
+      handleLogoFile(file)
+    }
+  }
+
+  function removeLogo() {
+    logoRequest.current += 1
+    setLogo(null)
+    setLogoError('')
+    setLogoLoading(false)
+
+    if (currentLink.status === 'valid') {
+      generatePreview(currentLink.url, selectedColor.hex, null)
     }
   }
 
@@ -200,27 +332,28 @@ export default function Generator() {
 
     try {
       if (format === 'png') {
-        const pngDataUrl = await QRCode.toDataURL(currentLink.url, options)
+        const pngDataUrl = await makeQrPng(currentLink.url, options, logo)
         triggerDownload(
           pngDataUrl,
-          makeFileName(currentLink.url, selectedColor.hex, 'png'),
+          makeFileName(currentLink.url, selectedColor.hex, 'png', Boolean(logo)),
         )
-        showToast(`PNG descargado · ${size} × ${size} px`)
+        showToast(
+          `PNG${logo ? ' con logo' : ''} descargado · ${size} × ${size} px`,
+        )
       } else {
-        const svgMarkup = await QRCode.toString(currentLink.url, {
-          ...options,
-          type: 'svg',
-        })
+        const svgMarkup = await makeQrSvg(currentLink.url, options, logo)
         const svgBlob = new Blob([svgMarkup], {
           type: 'image/svg+xml;charset=utf-8',
         })
         const svgUrl = URL.createObjectURL(svgBlob)
         triggerDownload(
           svgUrl,
-          makeFileName(currentLink.url, selectedColor.hex, 'svg'),
+          makeFileName(currentLink.url, selectedColor.hex, 'svg', Boolean(logo)),
         )
         window.setTimeout(() => URL.revokeObjectURL(svgUrl), 2000)
-        showToast('SVG descargado · escala sin perder nitidez')
+        showToast(
+          `SVG${logo ? ' con logo' : ''} descargado · escala sin perder nitidez`,
+        )
       }
     } catch {
       showToast('Algo falló al generar el archivo. Probá otra vez.', 'error')
@@ -361,9 +494,103 @@ export default function Generator() {
               </div>
             </div>
 
-            <div className="control control--colors">
+            <div className="control">
               <div className="control__head">
                 <span className="control__number">03</span>
+                <span className="control__label" id="logo-label">
+                  Logo central
+                </span>
+                <span className="control__hint">Opcional</span>
+              </div>
+
+              <div
+                className={`logo-field${logoDragging ? ' is-dragging' : ''}`}
+                role="group"
+                aria-labelledby="logo-label"
+                aria-busy={logoLoading}
+                onDragEnter={handleLogoDragEnter}
+                onDragOver={handleLogoDragOver}
+                onDragLeave={handleLogoDragLeave}
+                onDrop={handleLogoDrop}
+              >
+                <input
+                  ref={logoInputRef}
+                  className="logo-input"
+                  type="file"
+                  accept={LOGO_ACCEPT}
+                  onChange={handleLogoInput}
+                  tabIndex={-1}
+                  hidden
+                />
+
+                {logo ? (
+                  <div className="logo-chip">
+                    <button
+                      className="logo-chip__main"
+                      type="button"
+                      onClick={openLogoPicker}
+                      title="Cambiar logo"
+                      aria-describedby="logo-help"
+                    >
+                      <span className="logo-chip__thumb">
+                        <img src={logo.src} alt="" />
+                      </span>
+                      <span className="logo-chip__copy">
+                        <strong>{logo.name}</strong>
+                        <span>
+                          {logo.typeLabel}
+                          {logo.size ? ` · ${formatFileSize(logo.size)}` : ''}
+                          {' · '}
+                          <em>Cambiar</em>
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      className="logo-chip__remove"
+                      type="button"
+                      onClick={removeLogo}
+                      aria-label="Quitar el logo"
+                    >
+                      <XIcon />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="logo-drop"
+                    type="button"
+                    onClick={openLogoPicker}
+                    disabled={logoLoading}
+                    aria-describedby="logo-help"
+                  >
+                    <span className="logo-drop__icon">
+                      <ImageIcon />
+                    </span>
+                    <span className="logo-drop__copy">
+                      <strong>{logoLoading ? 'Leyendo imagen…' : 'Subí tu logo'}</strong>
+                      <small>
+                        PNG, JPG, JPEG o SVG · hasta {LOGO_LIMIT_LABEL}
+                      </small>
+                    </span>
+                    <span className="logo-drop__plus" aria-hidden="true">
+                      +
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              <p
+                id="logo-help"
+                className={`field-help${logoError ? ' field-help--error' : ''}`}
+                role={logoError ? 'alert' : undefined}
+              >
+                {logoError ||
+                  'Queda centrado con fondo blanco para conservar el contraste.'}
+              </p>
+            </div>
+
+            <div className="control control--colors">
+              <div className="control__head">
+                <span className="control__number">04</span>
                 <span className="control__label" id="color-label">
                   Elegí la tinta
                 </span>
@@ -409,7 +636,9 @@ export default function Generator() {
                 <span className="live-dot" />
                 Vista en vivo
               </span>
-              <span className="mono-label">Salida / 02 formatos</span>
+              <span className="mono-label">
+                {logo ? 'Salida / con logo' : 'Salida / 02 formatos'}
+              </span>
             </div>
 
             <div
@@ -422,7 +651,9 @@ export default function Generator() {
                 <figure className="qr-card">
                   <img
                     src={previewSrc}
-                    alt={`Código QR para ${currentLink.url}`}
+                    alt={`Código QR para ${currentLink.url}${
+                      logo ? ` con logo ${logo.name}` : ''
+                    }`}
                     width="760"
                     height="760"
                   />
@@ -528,7 +759,8 @@ export default function Generator() {
 
             <p className="qr-preview__note">
               <ArrowDownIcon />
-              Tu link no sale del navegador. El SVG escala hasta el infinito.
+              Tu link y tu logo no salen del navegador. El SVG escala hasta el
+              infinito.
             </p>
           </aside>
         </div>

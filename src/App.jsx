@@ -14,6 +14,7 @@ const MARQUEE_ITEMS = [
   'Sin registro',
   'PNG + SVG',
   '16 tintas oscuras',
+  'Logo al centro',
   'Sin marca de agua',
   'Escaneo directo',
   'RUIDO QR',
@@ -97,7 +98,7 @@ function Hero() {
 
         <div className="hero__aside">
           <p className="hero__lead">
-            Pegá una URL. Elegí el tamaño y la tinta. Llevate un QR{' '}
+            Pegá una URL. Elegí tamaño, tinta y logo. Llevate un QR{' '}
             <strong>en PNG o SVG</strong> que no pasa desapercibido.
           </p>
 
@@ -178,10 +179,10 @@ function Process() {
           </span>
           <h3>Ajustá a tu medida</h3>
           <p>
-            Deslizá el tamaño y elegí entre 16 tintas oscuras pensadas para
-            escanear sin dudas.
+            Deslizá el tamaño, elegí entre 16 tintas oscuras y sumá tu logo al
+            centro. El QR sigue escaneando.
           </p>
-          <span className="step__tag">Tamaño + color</span>
+          <span className="step__tag">Tamaño + color + logo</span>
         </article>
 
         <article className="step step--lime">
@@ -237,7 +238,8 @@ function SiteFooter() {
 
           <div className="footer-cta__aside">
             <p>
-              Tu QR está a un scroll. Elegí tinta, tamaño y bajalo en PNG o SVG.
+              Tu QR está a un scroll. Elegí tinta, tamaño y logo, y bajalo en PNG
+              o SVG.
             </p>
             <a className="button-primary button-primary--lime" href="#generador">
               <span>Ir al generador</span>
